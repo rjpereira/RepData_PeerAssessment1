@@ -8,18 +8,117 @@ output:
 
 ## Loading and preprocessing the data
 
+```{r}
+setwd('~/Downloads/peer1/RepData_PeerAssessment1')
+df=read.csv('activity.csv')
+
+# Convert date to...date : always like to have it from the beginning
+df$date <- as.Date(df$date)
+
+head(df)
+```
+
 
 
 ## What is mean total number of steps taken per day?
 
+Calculate the total number of steps taken per day:
 
+```{r}
+aggregate(steps ~ date, df, sum)
+```
+
+If you do not understand the difference between a histogram and a barplot, research the difference between them. Make a histogram of the total number of steps taken each day.
+
+I'm not 100% sure I understand the question here, because it seems to imply, that they want us to set the data in a format so that we can use hist(), even if a barplot would be more indicated as we already have counts per interval and we could use aggregate to more naturally use a barplot. 
+So although it doesn't seem the most adequate way to do it, I transform the data to use hist().
+
+```{r}
+# Make a copy of df, with only the rows which do not have NA
+df1 <- df[complete.cases(df),]
+
+# Create a var with the date of each step
+steps <- rep(df1$date,df1$steps)
+
+# Now do the hist
+hist(steps,breaks=unique(steps),freq=T)
+```
+
+Calculate and report the mean and median of the total number of steps taken per day
+
+```{r}
+daily <- aggregate(steps ~ date, df, sum)
+head(daily)
+summary(daily)
+```
+
+As above there is a mean of 10766 and a median of 10765 steps per day
 
 ## What is the average daily activity pattern?
 
 
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r}
+avg <- aggregate(steps ~ interval, df1, mean)
+plot(avg$interval,avg$steps,type='l')
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+avg[which.max(avg$steps),]
+```
 
 ## Imputing missing values
 
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
 
+```{r}
+nrow(df[is.na(df$steps),])
+```
+
+Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+Will work with a df2 copy now, and replace NAs with the mean of that day
+```{r}
+df2 <- transform(df, steps = ifelse(is.na(steps),mean(df[df$date==date,]$steps,na.rm=TRUE), steps))
+```
+
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+steps <- rep(as.Date(df2$date),df2$steps)
+hist(steps,breaks=unique(steps),freq=T)
+```
+
+As for the mean and median
+
+```{r}
+daily <- aggregate(steps ~ date, df2, sum)
+head(daily)
+summary(daily)
+```
+
+In my case this doesn't change much, because I'm replacing the ones I didn't use before by the means of the remaining, so the mean remains the same.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+```{r}
+df2$weekend <- factor(ifelse(weekdays(as.Date(df2$date)) %in% c("Sunday","Saturday"),"weekend","weekday"))
+```
+
+Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+Only now how to do it with lattice:
+```{r}
+avg <- aggregate(steps ~ interval+weekend, df2, mean)
+
+# Plot chart
+library(lattice) 
+xyplot(steps~interval|weekend,dat=avg,type='l')
+```
+
